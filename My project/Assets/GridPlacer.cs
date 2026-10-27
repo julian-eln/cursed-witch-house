@@ -10,7 +10,7 @@ public class GridPlacer : MonoBehaviour
         public Vector2Int footprint = Vector2Int.one; // how many cells it covers
     }
     [Header("Blocked Areas")]
-    [Tooltip("Rectangles of cells where nothing spawns. X/Y = first cell, W/H = size in cells")]
+    [Tooltip("Scaled cubes (or any Transforms) marking areas where nothing spawns. Position = center, X/Z scale = size")]
     public Transform[] blockedAreas;
     [Tooltip("Colliders on these layers block any cell they touch")]
     public LayerMask blockerMask;
@@ -20,7 +20,7 @@ public class GridPlacer : MonoBehaviour
     public float cellSize = 2f;
 
     [Header("Randomness")]
-    public int seed = 123;
+    public int seed = Random.RandomRange(100,999);
     [Range(0f, 1f)] public float fillChance = 0.3f;
 
     [Header("Noise")]
@@ -60,12 +60,27 @@ public class GridPlacer : MonoBehaviour
     {
         if (options == null || options.Length == 0)
         {
-            Debug.LogWarning("GridPlacer: add at least one option in the Inspector.");
+            Debug.LogWarning("GridPlacer: add at least one option in the Inspector.", this);
+            return;
+        }
+
+        // Report any empty slots so you know which entry to fix
+        bool anyValid = false;
+        for (int i = 0; i < options.Length; i++)
+        {
+            if (options[i] == null || options[i].prefab == null)
+                Debug.LogWarning($"GridPlacer: Options element {i} has no prefab and will be skipped.", this);
+            else if (options[i].weight > 0f)
+                anyValid = true;
+        }
+        if (!anyValid)
+        {
+            Debug.LogWarning("GridPlacer: no option has both a prefab and a weight above 0, so nothing will spawn.", this);
             return;
         }
 
         if (snapToGround && groundMask == 0)                            // STEP 8
-            Debug.LogWarning("GridPlacer: Ground Mask is set to Nothing, so nothing will spawn.");
+            Debug.LogWarning("GridPlacer: Ground Mask is set to Nothing, so nothing will spawn.", this);
 
         rng = new System.Random(seed);
         occupied = new bool[width, depth];
@@ -84,6 +99,7 @@ public class GridPlacer : MonoBehaviour
                 if (useNoise && NoiseAt(x, z) < noiseThreshold) continue; // outside a noise patch
 
                 SpawnOption option = PickOption();
+                if (option == null) continue;                             // no usable option
                 if (!Fits(x, z, option.footprint)) continue;              // would overlap or go off the grid
 
                 Vector3 pos = CellToWorld(x, z, option.footprint);
@@ -138,18 +154,31 @@ public class GridPlacer : MonoBehaviour
         return min + (float)rng.NextDouble() * (max - min);
     }
 
+    bool IsUsable(SpawnOption o)
+    {
+        return o != null && o.prefab != null && o.weight > 0f;
+    }
+
     SpawnOption PickOption()
     {
         float total = 0f;
-        foreach (var o in options) total += o.weight;
+        SpawnOption lastValid = null;
+        foreach (var o in options)
+        {
+            if (!IsUsable(o)) continue;   // skip empty slots and zero weights
+            total += o.weight;
+            lastValid = o;
+        }
+        if (lastValid == null) return null;
 
         float roll = (float)rng.NextDouble() * total;
         foreach (var o in options)
         {
+            if (!IsUsable(o)) continue;
             roll -= o.weight;
             if (roll <= 0f) return o;
         }
-        return options[options.Length - 1];
+        return lastValid; // guards against float rounding
     }
 
     Vector3 CellToWorld(int x, int z, Vector2Int size)
@@ -208,28 +237,30 @@ public class GridPlacer : MonoBehaviour
             }
         }
     }
+
     bool IsManuallyBlocked(int x, int z)
     {
-        // 1. Is this cell inside one of the rectangles?
+        // 1. Is this cell inside one of the blocked-area cubes?
         Vector3 cellCenter = CellToWorld(x, z, Vector2Int.one);
-        foreach (Transform t in blockedAreas)
+        if (blockedAreas != null)
         {
-            if (t == null) continue;   // empty slot in the list
-            Vector3 half = t.lossyScale * 0.5f;   // a Unity Cube is 1 unit, so scale = size
-            if (Mathf.Abs(cellCenter.x - t.position.x) <= half.x &&
-                Mathf.Abs(cellCenter.z - t.position.z) <= half.z)
-                return true;
+            foreach (Transform t in blockedAreas)
+            {
+                if (t == null) continue;   // empty slot in the list
+                Vector3 half = t.lossyScale * 0.5f;   // a Unity Cube is 1 unit, so scale = size
+                if (Mathf.Abs(cellCenter.x - t.position.x) <= half.x &&
+                    Mathf.Abs(cellCenter.z - t.position.z) <= half.z)
+                    return true;
+            }
         }
-
 
         // 2. Is there a blocker object touching this cell?
         if (blockerMask != 0)
         {
-            Vector3 center = CellToWorld(x, z, Vector2Int.one);
             // A tall, thin box over the cell. Slightly smaller than the cell
             // so a blocker that only touches the edge doesn't block the neighbors too.
             Vector3 halfSize = new Vector3(cellSize * 0.45f, raycastHeight, cellSize * 0.45f);
-            if (Physics.CheckBox(center, halfSize, Quaternion.identity, blockerMask, QueryTriggerInteraction.Collide))
+            if (Physics.CheckBox(cellCenter, halfSize, Quaternion.identity, blockerMask, QueryTriggerInteraction.Collide))
                 return true;
         }
 
