@@ -20,7 +20,10 @@ public class GridPlacer : MonoBehaviour
     public float cellSize = 2f;
 
     [Header("Randomness")]
-    public int seed = Random.RandomRange(100,999);
+    [Tooltip("Pick a new seed every time the game starts. Turn off to reuse the seed below.")]
+    public bool randomSeed = true;
+    [Tooltip("Used when Random Seed is off. Copy a seed from the Console to get the same layout again.")]
+    public int seed = 12345;
     [Range(0f, 1f)] public float fillChance = 0.3f;
 
     [Header("Noise")]
@@ -81,6 +84,11 @@ public class GridPlacer : MonoBehaviour
 
         if (snapToGround && groundMask == 0)                            // STEP 8
             Debug.LogWarning("GridPlacer: Ground Mask is set to Nothing, so nothing will spawn.", this);
+
+        // Pick the seed here (not in a field initializer, where Unity forbids Random calls)
+        if (randomSeed)
+            seed = UnityEngine.Random.Range(100, 1000);   // 100–999, max is exclusive for ints
+        Debug.Log($"GridPlacer seed: {seed}", this);
 
         rng = new System.Random(seed);
         occupied = new bool[width, depth];
@@ -217,6 +225,7 @@ public class GridPlacer : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
+        // Note: with Random Seed on, this preview only matches the real layout during Play mode.
         UpdateNoiseOffset();
 
         for (int x = 0; x < width; x++)

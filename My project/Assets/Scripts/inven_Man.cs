@@ -44,6 +44,7 @@ public class inven_Man : MonoBehaviour
             //calls function that equips sword
             swordEquipped();
         }
+     
 
     }
     //equips sword disables everything else

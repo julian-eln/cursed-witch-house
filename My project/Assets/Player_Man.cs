@@ -8,11 +8,12 @@ using System.Collections;
 public class Player_Man : MonoBehaviour
 {
     public TextMeshProUGUI text;
+    public static bool haskey;
     public string itemname;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        
+        haskey = false;
     }
 
     // Update is called once per frame
@@ -30,10 +31,9 @@ public class Player_Man : MonoBehaviour
     IEnumerator pickedup()
     {
         //will add one more +1 (wtv item) into the text field showing the player how much and what they picked up
-        text.text=text.text + "+1 " + itemname+" ";
+        text.text=text.text + "" + itemname+" ";
         yield return new WaitForSeconds(3);
         //resets text
-        text.text = "";
         
 
     }
