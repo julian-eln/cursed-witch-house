@@ -11,14 +11,17 @@ public class pathFinding : MonoBehaviour
     public bool chase;
     public Transform centrePoint; //centre of the area the agent wants to move around in
     //instead of centrePoint you can set it as the transform of the agent if you don't care about a specific area
+    public AudioSource audioSource;
+    public AudioSource current;
 
     // Update is called once per frame
     void Update()
     {
-        if(chase==true)
+        if (chase == true)
         {
             Agent.SetDestination(Target.position);
             Target = Detectionradius.Target;
+            playmu();
         }
         else if (pointOfInt == true)
         {
@@ -34,13 +37,13 @@ public class pathFinding : MonoBehaviour
                 Agent.SetDestination(point);
             }
         }
-        
+
     }
 
     bool RandomPoint(Vector3 center, float range, out Vector3 result)
     {
 
-        Vector3 randomPoint = center + Random.insideUnitSphere * range; //random point in a sphere 
+        Vector3 randomPoint = center + Random.insideUnitSphere * range; //random point in a sphere
         NavMeshHit hit;
         if (NavMesh.SamplePosition(randomPoint, out hit, 1.0f, NavMesh.AllAreas)) //documentation: https://docs.unity3d.com/ScriptReference/AI.NavMesh.SamplePosition.html
         {
@@ -53,7 +56,16 @@ public class pathFinding : MonoBehaviour
         result = Vector3.zero;
         return false;
     }
- 
+    void playmu()
+    {
+        // Only start the chase music if it isn't already playing,
+        // otherwise Play() restarts it from the beginning every frame
+        if (!audioSource.isPlaying)
+        {
+            current.Stop();
+            audioSource.Play();
+        }
+    }
+
 
 }
-

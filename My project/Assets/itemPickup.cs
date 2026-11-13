@@ -24,10 +24,21 @@ public class itemPickup : MonoBehaviour
         if (item == null)
             item = gameObject;
     }
+    public void Update()
+    {
+        if (Player_Man.haskey == true)
+            item.SetActive(false);
+    }
 
     void OnTriggerEnter(Collider other)
     {
-        if (pickedUp || !other.CompareTag("Player")) return;
+        // TEMP DEBUG: remove once pickups work
+        Debug.Log($"[itemPickup] '{name}' touched by '{other.name}' (tag: {other.tag}, pickedUp: {pickedUp})", this);
+
+        // Ignore anything that isn't the player, and ignore repeat hits after pickup
+        if (pickedUp || !other.CompareTag("Player"))
+            return;
+
         pickedUp = true;   // stops a double pickup if the player has more than one collider
 
         Debug.Log($"Picked up: {itemname}", this);
