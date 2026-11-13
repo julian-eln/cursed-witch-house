@@ -1,4 +1,5 @@
 Made for UBGD Halloween GameJam 2026
+itch link to game: https://jse060506.itch.io/witch-church
 # Core Idea: 
 Procedurally generated house where you have to escape a witch who has cursed the house.  
 
